@@ -2,15 +2,19 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Toaster } from "@/components/ui/sonner";
 import { Textarea } from "@/components/ui/textarea";
+import { useActor } from "@/hooks/useActor";
 import {
   Brain,
   ChevronDown,
   Heart,
   Leaf,
+  Loader2,
+  Lock,
   MessageCircle,
   Mic,
   MicOff,
   Phone,
+  ShieldCheck,
   Sparkles,
   Star,
 } from "lucide-react";
@@ -18,6 +22,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import { SiWhatsapp } from "react-icons/si";
 import { toast } from "sonner";
+import type { Inquiry } from "./backend";
 
 const PRODUCTS = [
   {
@@ -27,7 +32,7 @@ const PRODUCTS = [
     description:
       "Supports joint health and flexibility with advanced glucosamine complex. Ideal for active lifestyles and aging joints.",
     icon: <Heart className="w-4 h-4" />,
-    image: "/assets/generated/product-glucosamine.dim_400x400.jpg",
+    image: "/assets/generated/product-glucosamine-v2.dim_400x400.jpg",
     badge: "Best Seller",
   },
   {
@@ -37,7 +42,7 @@ const PRODUCTS = [
     description:
       "Improves digestion and detoxification with pure aloe vera extract. Natural gut health support.",
     icon: <Leaf className="w-4 h-4" />,
-    image: "/assets/generated/product-aloe-vera.dim_400x400.jpg",
+    image: "/assets/generated/product-aloe-vera-v2.dim_400x400.jpg",
     badge: "Natural",
   },
   {
@@ -47,7 +52,7 @@ const PRODUCTS = [
     description:
       "Supports immunity and inflammation control with bioavailable curcumin. Backed by Ayurvedic tradition.",
     icon: <Brain className="w-4 h-4" />,
-    image: "/assets/generated/product-curcumin.dim_400x400.jpg",
+    image: "/assets/generated/product-curcumin-v2.dim_400x400.jpg",
     badge: "Ayurvedic",
   },
   {
@@ -57,13 +62,29 @@ const PRODUCTS = [
     description:
       "Helps reduce hair fall with nourishing botanical extracts. Promotes thicker, stronger hair growth.",
     icon: <Sparkles className="w-4 h-4" />,
-    image: "/assets/generated/product-hair-serum.dim_400x400.jpg",
+    image: "/assets/generated/product-hair-serum-v2.dim_400x400.jpg",
     badge: "Popular",
   },
 ];
 
+const HINT_CHIPS = [
+  "Joint Pain",
+  "Hair Fall",
+  "Digestion",
+  "Immunity",
+  "Diabetes",
+  "Blood Pressure",
+  "Weight Loss",
+  "Skin Care",
+  "Stress",
+  "Energy",
+  "Cholesterol",
+  "Bone Health",
+];
+
 function getAIReply(text: string): string {
   const lower = text.toLowerCase();
+
   if (lower.includes("joint pain") || lower.includes("joint")) {
     return "Vestige Glucosamine supports joint health. It strengthens cartilage and improves flexibility. I recommend taking it daily for best results.";
   }
@@ -88,6 +109,68 @@ function getAIReply(text: string): string {
   ) {
     return "Curcumin Plus supports immunity and inflammation control. Its powerful antioxidants boost your immune system naturally.";
   }
+  if (
+    lower.includes("diabetes") ||
+    lower.includes("blood sugar") ||
+    lower.includes("sugar")
+  ) {
+    return "Vestige Noni Juice helps regulate blood sugar levels naturally. Combined with a balanced diet and our Spirulina supplement, it supports better glucose management.";
+  }
+  if (
+    lower.includes("blood pressure") ||
+    lower.includes(" bp ") ||
+    lower.includes("hypertension")
+  ) {
+    return "Vestige Garlic Capsules and Omega 3 fish oil help support healthy blood pressure levels. They promote cardiovascular health naturally.";
+  }
+  if (
+    lower.includes("weight loss") ||
+    lower.includes("obesity") ||
+    lower.includes("overweight") ||
+    lower.includes(" fat ")
+  ) {
+    return "Vestige Flax Oil and Apple Cider Vinegar support healthy weight management. Combined with regular exercise, they boost metabolism effectively.";
+  }
+  if (
+    lower.includes("skin") ||
+    lower.includes("acne") ||
+    lower.includes("pimple") ||
+    lower.includes("glow") ||
+    lower.includes("face")
+  ) {
+    return "Vestige Aloe Vera Gel and Vitamin C supplements help improve skin health and glow. They fight acne and promote clear, radiant skin.";
+  }
+  if (
+    lower.includes("stress") ||
+    lower.includes("anxiety") ||
+    lower.includes("sleep") ||
+    lower.includes("insomnia")
+  ) {
+    return "Vestige Ashwagandha helps reduce stress and improve sleep quality. It's a powerful adaptogen that balances your body naturally.";
+  }
+  if (
+    lower.includes("energy") ||
+    lower.includes("fatigue") ||
+    lower.includes("tired") ||
+    lower.includes("weakness")
+  ) {
+    return "Vestige Spirulina and B-Complex provide an energy boost and fight fatigue. They support cellular energy production.";
+  }
+  if (
+    lower.includes("cholesterol") ||
+    lower.includes("heart") ||
+    lower.includes("cardiac")
+  ) {
+    return "Vestige Omega 3 and Garlic Capsules support healthy cholesterol and heart health. They protect your cardiovascular system.";
+  }
+  if (
+    lower.includes("bone") ||
+    lower.includes("calcium") ||
+    lower.includes("osteoporosis")
+  ) {
+    return "Vestige Calcium supplement with Vitamin D3 supports strong bones and prevents osteoporosis. Essential for bone density.";
+  }
+
   return "Please contact Prashanth Reddy for the best Vestige guidance. He can recommend the perfect product tailored to your specific health needs.";
 }
 
@@ -117,6 +200,8 @@ const DARK = "oklch(0.08 0.015 250)";
 const CARD_BG = "oklch(0.11 0.02 250)";
 
 export default function App() {
+  const { actor, isFetching } = useActor();
+
   const [isListening, setIsListening] = useState(false);
   const [transcript, setTranscript] = useState("");
   const [aiResponse, setAiResponse] = useState("");
@@ -126,6 +211,14 @@ export default function App() {
     phone: "",
     problem: "",
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Admin state
+  const [adminOpen, setAdminOpen] = useState(false);
+  const [adminLoading, setAdminLoading] = useState(false);
+  const [adminDenied, setAdminDenied] = useState(false);
+  const [inquiries, setInquiries] = useState<Inquiry[] | null>(null);
+
   const recognitionRef = useRef<any>(null);
 
   const scrollTo = (id: string) => {
@@ -177,14 +270,65 @@ export default function App() {
     setIsListening(false);
   };
 
-  const handleContactSubmit = (e: React.FormEvent) => {
+  const handleContactSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!contactForm.name || !contactForm.phone || !contactForm.problem) {
       toast.error("Please fill in all fields.");
       return;
     }
-    toast.success("Message sent! Prashanth Reddy will contact you shortly.");
-    setContactForm({ name: "", phone: "", problem: "" });
+    if (!actor || isFetching) {
+      toast.error("Service unavailable. Please try again.");
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      await actor.submitInquiry(
+        contactForm.name,
+        contactForm.phone,
+        contactForm.problem,
+      );
+      toast.success("Message sent! Prashanth Reddy will contact you shortly.");
+      setContactForm({ name: "", phone: "", problem: "" });
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to send message. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleViewInquiries = async () => {
+    if (!actor || isFetching) {
+      toast.error("Service unavailable. Please try again.");
+      return;
+    }
+    if (adminOpen && inquiries !== null) {
+      setAdminOpen(false);
+      return;
+    }
+    setAdminLoading(true);
+    setAdminDenied(false);
+    try {
+      const isAdmin = await actor.isCallerAdmin();
+      if (!isAdmin) {
+        setAdminDenied(true);
+        setAdminOpen(true);
+        setAdminLoading(false);
+        return;
+      }
+      const data = await actor.getInquiries();
+      // Sort newest first
+      const sorted = [...data].sort((a, b) =>
+        Number(b.timestamp - a.timestamp),
+      );
+      setInquiries(sorted);
+      setAdminOpen(true);
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to load inquiries.");
+    } finally {
+      setAdminLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -585,7 +729,7 @@ export default function App() {
                         className="text-sm"
                         style={{ color: "oklch(0.88 0.05 145)" }}
                       >
-                        “{transcript}”
+                        "{transcript}"
                       </p>
                     </motion.div>
                   )}
@@ -630,43 +774,51 @@ export default function App() {
               </div>
             </motion.div>
 
-            {/* Quick hint chips */}
-            <motion.div
-              variants={itemV}
-              className="mt-6 grid grid-cols-2 sm:grid-cols-4 gap-3"
-            >
-              {["Joint Pain", "Hair Fall", "Digestion", "Immunity"].map(
-                (hint) => (
-                  <button
-                    type="button"
-                    key={hint}
-                    className="rounded-xl px-3 py-2.5 text-center text-xs font-medium transition-all duration-200"
-                    style={{
-                      backgroundColor: "oklch(0.72 0.2 145 / 0.08)",
-                      border: "1px solid oklch(0.72 0.2 145 / 0.2)",
-                      color: G,
-                    }}
-                    onClick={() => {
-                      setTranscript(hint);
-                      const reply = getAIReply(hint);
-                      setAiResponse(reply);
-                      speakReply(reply);
-                    }}
-                    onMouseEnter={(e) => {
-                      (
-                        e.currentTarget as HTMLButtonElement
-                      ).style.backgroundColor = "oklch(0.72 0.2 145 / 0.2)";
-                    }}
-                    onMouseLeave={(e) => {
-                      (
-                        e.currentTarget as HTMLButtonElement
-                      ).style.backgroundColor = "oklch(0.72 0.2 145 / 0.08)";
-                    }}
-                  >
-                    &ldquo;{hint}&rdquo;
-                  </button>
-                ),
-              )}
+            {/* Quick hint chips — 12 topics in 3 rows of 4 */}
+            <motion.div variants={itemV} className="mt-6 space-y-3">
+              {(
+                [
+                  ["row-1", HINT_CHIPS.slice(0, 4)],
+                  ["row-2", HINT_CHIPS.slice(4, 8)],
+                  ["row-3", HINT_CHIPS.slice(8, 12)],
+                ] as [string, string[]][]
+              ).map(([rowKey, row]) => (
+                <div
+                  key={rowKey}
+                  className="grid grid-cols-2 sm:grid-cols-4 gap-3"
+                >
+                  {row.map((hint) => (
+                    <button
+                      type="button"
+                      key={hint}
+                      className="rounded-xl px-3 py-2.5 text-center text-xs font-medium transition-all duration-200"
+                      style={{
+                        backgroundColor: "oklch(0.72 0.2 145 / 0.08)",
+                        border: "1px solid oklch(0.72 0.2 145 / 0.2)",
+                        color: G,
+                      }}
+                      onClick={() => {
+                        setTranscript(hint);
+                        const reply = getAIReply(hint);
+                        setAiResponse(reply);
+                        speakReply(reply);
+                      }}
+                      onMouseEnter={(e) => {
+                        (
+                          e.currentTarget as HTMLButtonElement
+                        ).style.backgroundColor = "oklch(0.72 0.2 145 / 0.2)";
+                      }}
+                      onMouseLeave={(e) => {
+                        (
+                          e.currentTarget as HTMLButtonElement
+                        ).style.backgroundColor = "oklch(0.72 0.2 145 / 0.08)";
+                      }}
+                    >
+                      &ldquo;{hint}&rdquo;
+                    </button>
+                  ))}
+                </div>
+              ))}
             </motion.div>
           </motion.div>
         </div>
@@ -949,16 +1101,19 @@ export default function App() {
                 <button
                   type="submit"
                   data-ocid="contact.submit_button"
-                  className="w-full h-12 rounded-xl font-semibold text-sm transition-all duration-300"
+                  disabled={isSubmitting}
+                  className="w-full h-12 rounded-xl font-semibold text-sm transition-all duration-300 flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
                   style={{
                     backgroundColor: G,
                     color: DARK,
                     boxShadow: "0 0 16px oklch(0.72 0.2 145 / 0.35)",
                   }}
                   onMouseEnter={(e) => {
-                    const b = e.currentTarget as HTMLButtonElement;
-                    b.style.transform = "translateY(-1px)";
-                    b.style.boxShadow = "0 0 28px oklch(0.72 0.2 145 / 0.55)";
+                    if (!isSubmitting) {
+                      const b = e.currentTarget as HTMLButtonElement;
+                      b.style.transform = "translateY(-1px)";
+                      b.style.boxShadow = "0 0 28px oklch(0.72 0.2 145 / 0.55)";
+                    }
                   }}
                   onMouseLeave={(e) => {
                     const b = e.currentTarget as HTMLButtonElement;
@@ -966,7 +1121,14 @@ export default function App() {
                     b.style.boxShadow = "0 0 16px oklch(0.72 0.2 145 / 0.35)";
                   }}
                 >
-                  Send Message
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Sending...
+                    </>
+                  ) : (
+                    "Send Message"
+                  )}
                 </button>
 
                 <div className="relative flex items-center gap-3 py-1">
@@ -1074,6 +1236,241 @@ export default function App() {
         </div>
       </section>
 
+      {/* ADMIN SECTION */}
+      <section
+        id="admin"
+        className="py-16 px-4 sm:px-6"
+        style={{ backgroundColor: "oklch(0.075 0.014 250)" }}
+      >
+        <div className="max-w-4xl mx-auto">
+          <motion.div
+            variants={containerV}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-60px" }}
+          >
+            <motion.div variants={itemV} className="text-center mb-8">
+              <div className="flex items-center justify-center gap-2 mb-2">
+                <Lock
+                  className="w-4 h-4"
+                  style={{ color: "oklch(0.55 0.04 145)" }}
+                />
+                <span
+                  className="text-xs font-semibold tracking-widest uppercase"
+                  style={{ color: "oklch(0.45 0.03 145)" }}
+                >
+                  Admin Access
+                </span>
+              </div>
+
+              <button
+                type="button"
+                data-ocid="admin.primary_button"
+                onClick={handleViewInquiries}
+                disabled={adminLoading}
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-semibold text-sm transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed"
+                style={{
+                  backgroundColor:
+                    adminOpen && inquiries !== null
+                      ? "oklch(0.72 0.2 145 / 0.15)"
+                      : "oklch(0.72 0.2 145 / 0.08)",
+                  border: "1px solid oklch(0.72 0.2 145 / 0.25)",
+                  color: G,
+                }}
+                onMouseEnter={(e) => {
+                  if (!adminLoading) {
+                    (
+                      e.currentTarget as HTMLButtonElement
+                    ).style.backgroundColor = "oklch(0.72 0.2 145 / 0.18)";
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  (e.currentTarget as HTMLButtonElement).style.backgroundColor =
+                    adminOpen && inquiries !== null
+                      ? "oklch(0.72 0.2 145 / 0.15)"
+                      : "oklch(0.72 0.2 145 / 0.08)";
+                }}
+              >
+                {adminLoading ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <ShieldCheck className="w-4 h-4" />
+                )}
+                {adminLoading
+                  ? "Checking access..."
+                  : adminOpen && inquiries !== null
+                    ? "Hide Inquiries"
+                    : "View Inquiries (Admin)"}
+              </button>
+            </motion.div>
+
+            <AnimatePresence>
+              {adminOpen && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.35, ease: "easeInOut" }}
+                  className="overflow-hidden"
+                >
+                  {adminDenied ? (
+                    <div
+                      className="rounded-2xl p-6 text-center"
+                      data-ocid="admin.error_state"
+                      style={{
+                        backgroundColor: CARD_BG,
+                        border: "1px solid oklch(0.72 0.2 145 / 0.15)",
+                      }}
+                    >
+                      <Lock
+                        className="w-8 h-8 mx-auto mb-3"
+                        style={{ color: "oklch(0.55 0.04 145)" }}
+                      />
+                      <p
+                        className="text-sm font-medium mb-1"
+                        style={{ color: "oklch(0.85 0.04 145)" }}
+                      >
+                        Admin access required
+                      </p>
+                      <p
+                        className="text-xs"
+                        style={{ color: "oklch(0.55 0.04 145)" }}
+                      >
+                        Contact Prashanth Reddy to get admin access.
+                      </p>
+                    </div>
+                  ) : inquiries !== null ? (
+                    <div
+                      className="rounded-2xl overflow-hidden"
+                      data-ocid="admin.table"
+                      style={{
+                        backgroundColor: CARD_BG,
+                        border: "1px solid oklch(0.72 0.2 145 / 0.2)",
+                      }}
+                    >
+                      <div
+                        className="flex items-center justify-between px-6 py-4"
+                        style={{
+                          borderBottom: "1px solid oklch(0.72 0.2 145 / 0.12)",
+                        }}
+                      >
+                        <div className="flex items-center gap-2">
+                          <ShieldCheck
+                            className="w-4 h-4"
+                            style={{ color: G }}
+                          />
+                          <span
+                            className="font-semibold text-sm"
+                            style={{ color: "oklch(0.9 0.04 145)" }}
+                          >
+                            Contact Submissions
+                          </span>
+                        </div>
+                        <span
+                          className="text-xs px-2.5 py-1 rounded-full font-medium"
+                          style={{
+                            backgroundColor: "oklch(0.72 0.2 145 / 0.12)",
+                            color: G,
+                          }}
+                        >
+                          {inquiries.length} total
+                        </span>
+                      </div>
+
+                      {inquiries.length === 0 ? (
+                        <div
+                          className="py-12 text-center"
+                          data-ocid="admin.empty_state"
+                        >
+                          <p
+                            className="text-sm"
+                            style={{ color: "oklch(0.5 0.03 145)" }}
+                          >
+                            No inquiries yet.
+                          </p>
+                        </div>
+                      ) : (
+                        <div
+                          className="divide-y"
+                          style={{ borderColor: "oklch(0.72 0.2 145 / 0.08)" }}
+                        >
+                          {inquiries.map((inq, idx) => (
+                            <div
+                              key={String(inq.timestamp)}
+                              data-ocid={`admin.row.${idx + 1}`}
+                              className="px-6 py-4 grid grid-cols-1 sm:grid-cols-4 gap-3 sm:gap-4 items-start"
+                            >
+                              <div>
+                                <p
+                                  className="text-xs font-semibold uppercase tracking-wider mb-1"
+                                  style={{ color: "oklch(0.45 0.03 145)" }}
+                                >
+                                  Name
+                                </p>
+                                <p
+                                  className="text-sm font-medium"
+                                  style={{ color: "oklch(0.9 0.04 145)" }}
+                                >
+                                  {inq.name}
+                                </p>
+                              </div>
+                              <div>
+                                <p
+                                  className="text-xs font-semibold uppercase tracking-wider mb-1"
+                                  style={{ color: "oklch(0.45 0.03 145)" }}
+                                >
+                                  Phone
+                                </p>
+                                <p
+                                  className="text-sm"
+                                  style={{ color: "oklch(0.8 0.05 145)" }}
+                                >
+                                  {inq.phone}
+                                </p>
+                              </div>
+                              <div>
+                                <p
+                                  className="text-xs font-semibold uppercase tracking-wider mb-1"
+                                  style={{ color: "oklch(0.45 0.03 145)" }}
+                                >
+                                  Health Problem
+                                </p>
+                                <p
+                                  className="text-sm leading-relaxed"
+                                  style={{ color: "oklch(0.8 0.05 145)" }}
+                                >
+                                  {inq.problem}
+                                </p>
+                              </div>
+                              <div>
+                                <p
+                                  className="text-xs font-semibold uppercase tracking-wider mb-1"
+                                  style={{ color: "oklch(0.45 0.03 145)" }}
+                                >
+                                  Date
+                                </p>
+                                <p
+                                  className="text-xs"
+                                  style={{ color: "oklch(0.6 0.04 145)" }}
+                                >
+                                  {new Date(
+                                    Number(inq.timestamp / 1_000_000n),
+                                  ).toLocaleString()}
+                                </p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ) : null}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </motion.div>
+        </div>
+      </section>
+
       {/* FOOTER */}
       <footer
         className="py-10 px-4 sm:px-6"
@@ -1109,7 +1506,8 @@ export default function App() {
             className="text-xs text-center"
             style={{ color: "oklch(0.45 0.03 145)" }}
           >
-            &copy; 2026 Prashanth Reddy | Vestige AI Assistant
+            &copy; {new Date().getFullYear()} Prashanth Reddy | Vestige AI
+            Assistant
           </p>
           <p className="text-xs" style={{ color: "oklch(0.4 0.025 145)" }}>
             Built with &#10084;&#65039; using{" "}
