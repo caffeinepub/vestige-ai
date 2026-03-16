@@ -1,0 +1,87 @@
+@import url("https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,200..800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 18 25 35;
+    --foreground: 240 248 240;
+    --card: 15 28 22;
+    --card-foreground: 220 240 225;
+    --popover: 12 22 18;
+    --popover-foreground: 220 240 225;
+    --primary: 0.72 0.2 145;
+    --primary-foreground: 240 248 240;
+    --secondary: 22 35 28;
+    --secondary-foreground: 180 220 190;
+    --muted: 20 30 24;
+    --muted-foreground: 140 180 155;
+    --accent: 25 40 30;
+    --accent-foreground: 160 210 175;
+    --destructive: 0.6 0.22 25;
+    --destructive-foreground: 240 248 240;
+    --border: 30 50 38;
+    --input: 18 32 24;
+    --ring: 0.72 0.2 145;
+    --radius: 0.75rem;
+    --green-vivid: 0.72 0.2 145;
+    --green-glow: 0.65 0.18 145;
+    --green-dim: 0.45 0.12 145;
+    --bg-deep: 0.08 0.015 250;
+    --bg-card: 0.12 0.02 250;
+    --text-bright: 0.96 0.02 145;
+    --text-muted: 0.6 0.04 145;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  html {
+    color-scheme: dark;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background-color: oklch(var(--bg-deep));
+    color: oklch(var(--text-bright));
+    font-family: "Plus Jakarta Sans", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: "Bricolage Grotesque", sans-serif;
+  }
+}
+
+@layer utilities {
+  .wave-bar {
+    animation: wave 1s ease-in-out infinite;
+  }
+  .wave-bar:nth-child(2) {
+    animation-delay: 0.15s;
+  }
+  .wave-bar:nth-child(3) {
+    animation-delay: 0.3s;
+  }
+  .wave-bar:nth-child(4) {
+    animation-delay: 0.45s;
+  }
+  .wave-bar:nth-child(5) {
+    animation-delay: 0.6s;
+  }
+
+  @keyframes wave {
+    0%,
+    100% {
+      transform: scaleY(0.4);
+    }
+    50% {
+      transform: scaleY(1);
+    }
+  }
+}
